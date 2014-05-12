@@ -8,6 +8,7 @@ import android.view.MenuItem;
 
 
 public class RunActivity extends SingleFragmentActivity {
+    public static final String EXTRA_RUN_ID = "RUN_ID";
 
     @Override
     protected Fragment createFragment() {
