@@ -1,5 +1,8 @@
 package com.tackable.foobar.android.runtracker.app;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -8,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 /**
  * Created by stevenwoo on 5/11/14.
@@ -17,17 +21,53 @@ public class RunFragment extends Fragment {
     private static final String TAG = "RunFragment";
 
     private Location mLastLocation;
-
+    private RunManager mRunManager;
+    private Run mRun;
     private Button mStartButton, mStopButton;
     private TextView mStartedTextView, mLatitudeTextView,
             mLongitudeTextView, mAltitudeTextView, mDurationTextView;
 
 
+    private BroadcastReceiver mLocationReceiver = new LocationReceiver() {
+
+        @Override
+        protected void onLocationReceived(Context context, Location loc) {
+            mLastLocation = loc;
+            if (isVisible())
+                updateUI();
+        }
+
+        @Override
+        protected void onProviderEnabledChanged(boolean enabled) {
+            int toastText = enabled ? R.string.gps_enabled : R.string.gps_disabled;
+            Toast.makeText(getActivity(), toastText, Toast.LENGTH_LONG).show();
+        }
+
+    };
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-//        mRunManager = RunManager.get(getActivity());
+        mRunManager = RunManager.get(getActivity());
+    }
+    private void updateUI() {
+        boolean started = mRunManager.isTrackingRun();
+
+        if (mRun != null) {
+            mStartedTextView.setText(mRun.getStartDate().toString());
+        }
+
+        int durationSeconds = 0;
+        if (mLastLocation != null) {
+            durationSeconds = mRun.getDurationSeconds(mLastLocation.getTime());
+            mLatitudeTextView.setText(Double.toString(mLastLocation.getLatitude()));
+            mLongitudeTextView.setText(Double.toString(mLastLocation.getLongitude()));
+            mAltitudeTextView.setText(Double.toString(mLastLocation.getAltitude()));
+        }
+        mDurationTextView.setText(Run.formatDuration(durationSeconds));
+
+        mStartButton.setEnabled(!started);
+        mStopButton.setEnabled(started);
     }
 
     @Override
@@ -45,9 +85,9 @@ public class RunFragment extends Fragment {
         mStartButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                mRunManager.startLocationUpdates();
-//                mRun = new Run();
-//                updateUI();
+                mRunManager.startLocationUpdates();
+                mRun = new Run();
+                updateUI();
             }
         });
 
@@ -55,14 +95,26 @@ public class RunFragment extends Fragment {
         mStopButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                mRunManager.stopLocationUpdates();
-//                updateUI();
+                mRunManager.stopLocationUpdates();
+                updateUI();
             }
         });
 
-//        updateUI();
+        updateUI();
 
         return view;
+    }
+    @Override
+    public void onStart() {
+        super.onStart();
+        getActivity().registerReceiver(mLocationReceiver,
+                new IntentFilter(RunManager.ACTION_LOCATION));
+    }
+
+    @Override
+    public void onStop() {
+        getActivity().unregisterReceiver(mLocationReceiver);
+        super.onStop();
     }
 
 }
