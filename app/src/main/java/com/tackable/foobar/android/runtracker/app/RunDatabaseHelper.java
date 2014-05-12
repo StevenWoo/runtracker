@@ -68,7 +68,7 @@ public class RunDatabaseHelper extends SQLiteOpenHelper {
                 null, null, null, null, null, COLUMN_RUN_START_DATE + " asc");
         return new RunCursor(wrapped);
     }
-    
+
     public RunCursor queryRun(long id) {
         Cursor wrapped = getReadableDatabase().query(TABLE_RUN, 
                 null, // all columns 

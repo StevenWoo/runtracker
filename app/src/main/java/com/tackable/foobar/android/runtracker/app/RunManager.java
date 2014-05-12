@@ -76,10 +76,14 @@ public class RunManager {
         }
     }
     
+
     public boolean isTrackingRun() {
         return getLocationPendingIntent(false) != null;
     }
-    
+
+    public boolean isTrackingRun(Run run) {
+        return run != null && run.getId() == mCurrentRunId;
+    }
     private void broadcastLocation(Location location) {
         Intent broadcast = new Intent(ACTION_LOCATION);
         broadcast.putExtra(LocationManager.KEY_LOCATION_CHANGED, location);

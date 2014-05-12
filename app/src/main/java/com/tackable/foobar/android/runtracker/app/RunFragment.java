@@ -19,7 +19,7 @@ import android.widget.Toast;
 
 public class RunFragment extends Fragment {
     private static final String TAG = "RunFragment";
-
+    private static final String ARG_RUN_ID = "RUN_ID";
     private Location mLastLocation;
     private RunManager mRunManager;
     private Run mRun;
@@ -27,11 +27,20 @@ public class RunFragment extends Fragment {
     private TextView mStartedTextView, mLatitudeTextView,
             mLongitudeTextView, mAltitudeTextView, mDurationTextView;
 
-
+    public static RunFragment newInstance(long runId) {
+        Bundle args = new Bundle();
+        args.putLong(ARG_RUN_ID, runId);
+        RunFragment rf = new RunFragment();
+        rf.setArguments(args);
+        return rf;
+    }
     private BroadcastReceiver mLocationReceiver = new LocationReceiver() {
 
         @Override
         protected void onLocationReceived(Context context, Location loc) {
+            if( !mRunManager.isTrackingRun(mRun)){
+                return;
+            }
             mLastLocation = loc;
             if (isVisible())
                 updateUI();
@@ -49,9 +58,18 @@ public class RunFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
         mRunManager = RunManager.get(getActivity());
+        Bundle args = getArguments();
+        if (args != null) {
+            long runId = args.getLong(ARG_RUN_ID, -1);
+            if (runId != -1) {
+                mRun = mRunManager.getRun(runId);
+                mLastLocation = mRunManager.getLastLocationForRun(runId);
+            }
+        }
     }
     private void updateUI() {
         boolean started = mRunManager.isTrackingRun();
+        boolean trackingThisRun = mRunManager.isTrackingRun(mRun);
 
         if (mRun != null) {
             mStartedTextView.setText(mRun.getStartDate().toString());
@@ -67,8 +85,10 @@ public class RunFragment extends Fragment {
         mDurationTextView.setText(Run.formatDuration(durationSeconds));
 
         mStartButton.setEnabled(!started);
-        mStopButton.setEnabled(started);
+        mStopButton.setEnabled(started && trackingThisRun);
     }
+
+    
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -85,7 +105,12 @@ public class RunFragment extends Fragment {
         mStartButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mRun = mRunManager.startNewRun();
+                if( mRun == null ) {
+                    mRun = mRunManager.startNewRun();
+                }
+                else{
+                    mRunManager.startTrackingRun(mRun);
+                }
                 updateUI();
             }
         });
